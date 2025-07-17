@@ -52,6 +52,31 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				// Church-specific colors
+				church: {
+					primary: 'hsl(var(--church-primary))',
+					gold: 'hsl(var(--church-gold))',
+					navy: 'hsl(var(--church-navy))',
+					light: 'hsl(var(--church-light))',
+					cream: 'hsl(var(--church-cream))'
+				},
+				// Department colors
+				departments: {
+					media: 'hsl(var(--media-primary))',
+					tambourine: 'hsl(var(--tambourine-primary))',
+					women: 'hsl(var(--women-primary))',
+					choir: 'hsl(var(--choir-primary))',
+					funeral: 'hsl(var(--funeral-primary))',
+					children: 'hsl(var(--children-primary))',
+					'junior-youth': 'hsl(var(--junior-youth-primary))',
+					'senior-youth': 'hsl(var(--senior-youth-primary))',
+					admin: 'hsl(var(--admin-primary))',
+					elders: 'hsl(var(--elders-primary))',
+					'junior-pastors': 'hsl(var(--junior-pastors-primary))',
+					'senior-pastors': 'hsl(var(--senior-pastors-primary))',
+					drama: 'hsl(var(--drama-primary))',
+					ushers: 'hsl(var(--ushers-primary))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
@@ -67,6 +92,20 @@ export default {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
+			},
+			backgroundImage: {
+				'gradient-church': 'var(--gradient-church)',
+				'gradient-gold': 'var(--gradient-gold)',
+				'gradient-light': 'var(--gradient-light)'
+			},
+			boxShadow: {
+				'church': 'var(--shadow-church)',
+				'gold': 'var(--shadow-gold)',
+				'elegant': 'var(--shadow-elegant)'
+			},
+			transitionProperty: {
+				'smooth': 'var(--transition-smooth)',
+				'bounce': 'var(--transition-bounce)'
 			},
 			keyframes: {
 				'accordion-down': {
@@ -84,11 +123,31 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'fade-in': {
+					from: {
+						opacity: '0',
+						transform: 'translateY(20px)'
+					},
+					to: {
+						opacity: '1',
+						transform: 'translateY(0)'
+					}
+				},
+				'slide-up': {
+					from: {
+						transform: 'translateY(100%)'
+					},
+					to: {
+						transform: 'translateY(0)'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'fade-in': 'fade-in 0.6s ease-out',
+				'slide-up': 'slide-up 0.4s ease-out'
 			}
 		}
 	},

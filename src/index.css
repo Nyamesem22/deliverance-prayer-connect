@@ -8,35 +8,72 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 0 0% 98%;
+    --foreground: 220 26% 14%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 220 26% 14%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 220 26% 14%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 220 100% 20%;
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 45 100% 51%;
+    --secondary-foreground: 220 100% 20%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 220 13% 95%;
+    --muted-foreground: 220 9% 46%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 45 100% 51%;
+    --accent-foreground: 220 100% 20%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 220 100% 20%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
+
+    /* Church-specific design tokens */
+    --church-primary: 220 100% 20%;
+    --church-gold: 45 100% 51%;
+    --church-navy: 220 46% 17%;
+    --church-light: 220 13% 95%;
+    --church-cream: 45 25% 96%;
+    
+    /* Department colors */
+    --media-primary: 260 100% 35%;
+    --tambourine-primary: 320 85% 45%;
+    --women-primary: 340 75% 55%;
+    --choir-primary: 200 90% 40%;
+    --funeral-primary: 280 60% 30%;
+    --children-primary: 120 70% 50%;
+    --junior-youth-primary: 30 95% 55%;
+    --senior-youth-primary: 15 85% 50%;
+    --admin-primary: 200 25% 40%;
+    --elders-primary: 45 90% 35%;
+    --junior-pastors-primary: 270 80% 40%;
+    --senior-pastors-primary: 45 100% 45%;
+    --drama-primary: 300 70% 45%;
+    --ushers-primary: 180 60% 40%;
+
+    /* Gradients */
+    --gradient-church: linear-gradient(135deg, hsl(var(--church-primary)), hsl(var(--church-navy)));
+    --gradient-gold: linear-gradient(135deg, hsl(var(--church-gold)), hsl(45 85% 45%));
+    --gradient-light: linear-gradient(180deg, hsl(var(--church-light)), hsl(var(--church-cream)));
+
+    /* Shadows */
+    --shadow-church: 0 10px 30px -5px hsl(var(--church-primary) / 0.3);
+    --shadow-gold: 0 8px 25px -5px hsl(var(--church-gold) / 0.4);
+    --shadow-elegant: 0 4px 20px -2px hsl(220 100% 20% / 0.15);
+
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
     --sidebar-background: 0 0% 98%;
 
