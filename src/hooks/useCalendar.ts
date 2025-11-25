@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isToday, isSameDay } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
+import { HDate, HebrewCalendar, Event, flags } from 'hebcal';
 
 export interface CalendarEvent {
   id: string;
@@ -130,67 +131,91 @@ export const useCalendar = () => {
     setEvents(sampleEvents);
   }, []);
 
-  // Generate Hebrew calendar events (simplified version without external library for now)
+  // Generate Hebrew calendar events using hebcal library
   useEffect(() => {
     const generateHebrewEvents = () => {
-      const hebrewHolidays: HebrewCalendarEvent[] = [
-        {
-          date: new Date(2024, 11, 25), // December 25, 2024 (approximation for Hanukkah period)
-          hebrewDate: '24 Kislev 5785',
-          holidayName: 'Hanukkah (Festival of Lights)',
-          isHoliday: true,
-          biblicalReference: '1 Maccabees 4:52-59, John 10:22-23',
-          significance: 'Festival of Dedication, Jesus walked in Solomon\'s Colonnade during Hanukkah'
-        },
-        {
-          date: new Date(2025, 2, 14), // March 14, 2025 (approximation for Purim)
-          hebrewDate: '14 Adar 5785',
-          holidayName: 'Purim',
-          isHoliday: true,
-          biblicalReference: 'Book of Esther',
-          significance: 'Celebration of deliverance from Haman\'s plot'
-        },
-        {
-          date: new Date(2025, 3, 13), // April 13, 2025 (approximation for Passover)
-          hebrewDate: '15 Nisan 5785',
-          holidayName: 'Passover (Pesach)',
-          isHoliday: true,
-          biblicalReference: 'Exodus 12, Luke 22:7-20',
-          significance: 'Memorial of exodus from Egypt, Jesus\' Last Supper was a Passover meal'
-        },
-        {
-          date: new Date(2025, 4, 22), // May 22, 2025 (approximation for Shavuot)
-          hebrewDate: '6 Sivan 5785',
-          holidayName: 'Shavuot (Pentecost)',
-          isHoliday: true,
-          biblicalReference: 'Leviticus 23:15-22, Acts 2:1-31',
-          significance: 'Feast of Weeks, the Holy Spirit was poured out on Pentecost'
-        },
-        {
-          date: new Date(2025, 8, 16), // September 16, 2025 (approximation for Rosh Hashanah)
-          hebrewDate: '1 Tishrei 5786',
-          holidayName: 'Rosh Hashanah (New Year)',
-          isHoliday: true,
-          biblicalReference: 'Leviticus 23:23-25',
+      const hebrewHolidays: HebrewCalendarEvent[] = [];
+      
+      // Get the start and end of the calendar view
+      const monthStart = startOfMonth(currentDate);
+      const monthEnd = endOfMonth(currentDate);
+      const calendarStart = startOfWeek(monthStart);
+      const calendarEnd = endOfWeek(monthEnd);
+
+      // Get Hebrew calendar events for the date range
+      const options = {
+        start: calendarStart,
+        end: calendarEnd,
+        candlelighting: false,
+        sedrot: false,
+        omer: false,
+      };
+
+      const events = HebrewCalendar.calendar(options);
+
+      // Biblical significance mapping for holidays
+      const biblicalSignificance: { [key: string]: { reference: string; significance: string } } = {
+        'Rosh Hashana': {
+          reference: 'Leviticus 23:23-25',
           significance: 'Jewish New Year, Day of Judgment and Remembrance'
         },
-        {
-          date: new Date(2025, 8, 25), // September 25, 2025 (approximation for Yom Kippur)
-          hebrewDate: '10 Tishrei 5786',
-          holidayName: 'Yom Kippur (Day of Atonement)',
-          isHoliday: true,
-          biblicalReference: 'Leviticus 16, Hebrews 9:6-15',
+        'Yom Kippur': {
+          reference: 'Leviticus 16, Hebrews 9:6-15',
           significance: 'Day of Atonement, prefigures Christ\'s sacrifice'
         },
-        {
-          date: new Date(2025, 8, 30), // September 30, 2025 (approximation for Sukkot)
-          hebrewDate: '15 Tishrei 5786',
-          holidayName: 'Sukkot (Feast of Tabernacles)',
-          isHoliday: true,
-          biblicalReference: 'Leviticus 23:33-43, John 7:2',
+        'Sukkot': {
+          reference: 'Leviticus 23:33-43, John 7:2',
           significance: 'Feast of Booths, Jesus taught during this feast'
+        },
+        'Chanukah': {
+          reference: '1 Maccabees 4:52-59, John 10:22-23',
+          significance: 'Festival of Dedication, Jesus walked in Solomon\'s Colonnade'
+        },
+        'Purim': {
+          reference: 'Book of Esther',
+          significance: 'Celebration of deliverance from Haman\'s plot'
+        },
+        'Pesach': {
+          reference: 'Exodus 12, Luke 22:7-20',
+          significance: 'Memorial of exodus from Egypt, Jesus\' Last Supper was a Passover meal'
+        },
+        'Shavuot': {
+          reference: 'Leviticus 23:15-22, Acts 2:1-31',
+          significance: 'Feast of Weeks, the Holy Spirit was poured out on Pentecost'
         }
-      ];
+      };
+
+      // Process each Hebrew calendar event
+      events.forEach((event: Event) => {
+        const hdate = event.getDate();
+        const gregDate = hdate.greg();
+        const hebrewDateStr = hdate.toString();
+        const eventDesc = event.render('en');
+        
+        // Check if it's a major holiday
+        const isHoliday = event.getFlags() & (flags.CHAG | flags.MAJOR_FAST | flags.MINOR_FAST | flags.ROSH_CHODESH);
+        
+        // Get biblical significance if available
+        let biblicalRef = '';
+        let significance = '';
+        
+        for (const [key, value] of Object.entries(biblicalSignificance)) {
+          if (eventDesc.includes(key)) {
+            biblicalRef = value.reference;
+            significance = value.significance;
+            break;
+          }
+        }
+
+        hebrewHolidays.push({
+          date: gregDate,
+          hebrewDate: hebrewDateStr,
+          holidayName: isHoliday ? eventDesc : undefined,
+          isHoliday: !!isHoliday,
+          biblicalReference: biblicalRef || undefined,
+          significance: significance || undefined
+        });
+      });
 
       setHebrewEvents(hebrewHolidays);
     };
