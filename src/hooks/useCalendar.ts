@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isToday, isSameDay } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
-import { HDate, HebrewCalendar, Event, flags } from 'hebcal';
+import Hebcal from 'hebcal';
 
 export interface CalendarEvent {
   id: string;
@@ -26,10 +26,64 @@ export interface HebrewCalendarEvent {
   significance?: string;
 }
 
+// Helper function to get Hebrew date string
+const getHebrewDateString = (date: Date): string => {
+  try {
+    const hd = new Hebcal.HDate(date);
+    return hd.toString('h');
+  } catch {
+    return '';
+  }
+};
+
+// Biblical significance mapping for holidays
+const biblicalSignificanceMap: { [key: string]: { reference: string; significance: string } } = {
+  'Rosh Hashana': {
+    reference: 'Leviticus 23:23-25',
+    significance: 'Jewish New Year, Day of Judgment and Remembrance'
+  },
+  'Yom Kippur': {
+    reference: 'Leviticus 16, Hebrews 9:6-15',
+    significance: 'Day of Atonement, prefigures Christ\'s sacrifice'
+  },
+  'Sukkot': {
+    reference: 'Leviticus 23:33-43, John 7:2',
+    significance: 'Feast of Booths, Jesus taught during this feast'
+  },
+  'Chanukah': {
+    reference: '1 Maccabees 4:52-59, John 10:22-23',
+    significance: 'Festival of Dedication, Jesus walked in Solomon\'s Colonnade'
+  },
+  'Purim': {
+    reference: 'Book of Esther',
+    significance: 'Celebration of deliverance from Haman\'s plot'
+  },
+  'Pesach': {
+    reference: 'Exodus 12, Luke 22:7-20',
+    significance: 'Memorial of exodus from Egypt, Jesus\' Last Supper was a Passover meal'
+  },
+  'Shavuot': {
+    reference: 'Leviticus 23:15-22, Acts 2:1-31',
+    significance: 'Feast of Weeks, the Holy Spirit was poured out on Pentecost'
+  },
+  'Tu BiShvat': {
+    reference: 'Deuteronomy 8:8',
+    significance: 'New Year of Trees, celebrating God\'s creation'
+  },
+  'Tisha B\'Av': {
+    reference: 'Lamentations',
+    significance: 'Day of mourning for the destruction of the Temples'
+  },
+  'Rosh Chodesh': {
+    reference: 'Numbers 10:10, Psalm 81:3',
+    significance: 'New Moon, biblical monthly celebration'
+  }
+};
+
 export const useCalendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [timezone] = useState('America/New_York'); // Default timezone, can be made configurable
+  const [timezone] = useState('America/New_York');
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [hebrewEvents, setHebrewEvents] = useState<HebrewCalendarEvent[]>([]);
 
@@ -45,12 +99,16 @@ export const useCalendar = () => {
 
   // Sample events with recurring and special dates
   useEffect(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    
     const sampleEvents: CalendarEvent[] = [
       // Recurring Sunday Services
       {
         id: 'sunday-service',
         title: 'Sunday Morning Worship',
-        date: new Date(2024, 11, 15), // December 15, 2024
+        date: new Date(currentYear, currentMonth, 15),
         time: '9:00 AM',
         location: 'Main Sanctuary',
         type: 'Service',
@@ -62,7 +120,7 @@ export const useCalendar = () => {
       {
         id: 'bible-study-1',
         title: 'Midweek Bible Study',
-        date: new Date(2024, 11, 18), // December 18, 2024
+        date: new Date(currentYear, currentMonth, 18),
         time: '7:00 PM',
         location: 'Fellowship Hall',
         type: 'Bible Study',
@@ -74,7 +132,7 @@ export const useCalendar = () => {
       {
         id: 'youth-1',
         title: 'Youth Group Meeting',
-        date: new Date(2024, 11, 20), // December 20, 2024
+        date: new Date(currentYear, currentMonth, 20),
         time: '6:30 PM',
         location: 'Youth Hall',
         type: 'Youth',
@@ -84,144 +142,116 @@ export const useCalendar = () => {
       // Children Events
       {
         id: 'children-1',
-        title: 'Children\'s Christmas Program',
-        date: new Date(2024, 11, 22), // December 22, 2024
+        title: 'Children\'s Ministry',
+        date: new Date(currentYear, currentMonth, 22),
         time: '11:00 AM',
         location: 'Main Sanctuary',
         type: 'Children',
         department: 'Children\'s Ministry',
-        description: 'Annual Christmas celebration with the children'
+        description: 'Weekly children\'s program'
       },
       // Special Holiday Events
       {
-        id: 'christmas-eve',
-        title: 'Christmas Eve Service',
-        date: new Date(2024, 11, 24), // December 24, 2024
+        id: 'special-service',
+        title: 'Special Prayer Service',
+        date: new Date(currentYear, currentMonth, 24),
         time: '7:00 PM',
         location: 'Main Sanctuary',
         type: 'Special',
         department: 'Main Church',
-        description: 'Candlelight Christmas Eve worship service',
-        biblicalSignificance: 'Celebrating the birth of Jesus Christ (Luke 2:1-20)'
-      },
-      {
-        id: 'christmas-day',
-        title: 'Christmas Day Celebration',
-        date: new Date(2024, 11, 25), // December 25, 2024
-        time: '10:00 AM',
-        location: 'Main Sanctuary',
-        type: 'Holiday',
-        department: 'Main Church',
-        description: 'Christmas morning worship celebrating the Nativity',
-        biblicalSignificance: 'The Word became flesh (John 1:14)'
-      },
-      // New Year Events
-      {
-        id: 'new-year-eve',
-        title: 'Watch Night Service',
-        date: new Date(2024, 11, 31), // December 31, 2024
-        time: '10:00 PM',
-        location: 'Main Sanctuary',
-        type: 'Special',
-        department: 'Main Church',
-        description: 'New Year\'s Eve prayer and reflection service'
+        description: 'Monthly prayer and praise service',
+        biblicalSignificance: 'Coming together in prayer (Matthew 18:20)'
       }
     ];
 
     setEvents(sampleEvents);
   }, []);
 
-  // Generate Hebrew calendar events using hebcal library
+  // Generate Hebrew calendar events
   useEffect(() => {
     const generateHebrewEvents = () => {
       const hebrewHolidays: HebrewCalendarEvent[] = [];
       
-      // Get the start and end of the calendar view
-      const monthStart = startOfMonth(currentDate);
-      const monthEnd = endOfMonth(currentDate);
-      const calendarStart = startOfWeek(monthStart);
-      const calendarEnd = endOfWeek(monthEnd);
-
-      // Get Hebrew calendar events for the date range
-      const options = {
-        start: calendarStart,
-        end: calendarEnd,
-        candlelighting: false,
-        sedrot: false,
-        omer: false,
-      };
-
-      const events = HebrewCalendar.calendar(options);
-
-      // Biblical significance mapping for holidays
-      const biblicalSignificance: { [key: string]: { reference: string; significance: string } } = {
-        'Rosh Hashana': {
-          reference: 'Leviticus 23:23-25',
-          significance: 'Jewish New Year, Day of Judgment and Remembrance'
-        },
-        'Yom Kippur': {
-          reference: 'Leviticus 16, Hebrews 9:6-15',
-          significance: 'Day of Atonement, prefigures Christ\'s sacrifice'
-        },
-        'Sukkot': {
-          reference: 'Leviticus 23:33-43, John 7:2',
-          significance: 'Feast of Booths, Jesus taught during this feast'
-        },
-        'Chanukah': {
-          reference: '1 Maccabees 4:52-59, John 10:22-23',
-          significance: 'Festival of Dedication, Jesus walked in Solomon\'s Colonnade'
-        },
-        'Purim': {
-          reference: 'Book of Esther',
-          significance: 'Celebration of deliverance from Haman\'s plot'
-        },
-        'Pesach': {
-          reference: 'Exodus 12, Luke 22:7-20',
-          significance: 'Memorial of exodus from Egypt, Jesus\' Last Supper was a Passover meal'
-        },
-        'Shavuot': {
-          reference: 'Leviticus 23:15-22, Acts 2:1-31',
-          significance: 'Feast of Weeks, the Holy Spirit was poured out on Pentecost'
+      try {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth() + 1; // Hebcal months are 1-indexed
+        
+        // Get the Hebrew year for this Gregorian date
+        const hebYear = new Hebcal.HDate(currentDate).getFullYear();
+        
+        // Create a Hebcal instance for the Hebrew year
+        const hc = new Hebcal.Year(hebYear);
+        
+        // Get holidays for this year
+        const holidays = hc.holidays;
+        
+        if (holidays && Array.isArray(holidays)) {
+          holidays.forEach((holiday: { date?: Date; greg?: () => Date; name?: string; desc?: string }) => {
+            try {
+              const gregDate = holiday.date || (holiday.greg ? holiday.greg() : null);
+              if (!gregDate) return;
+              
+              // Check if holiday is in current month view
+              if (gregDate.getMonth() === currentDate.getMonth() && 
+                  gregDate.getFullYear() === currentDate.getFullYear()) {
+                
+                const holidayName = holiday.name || holiday.desc || 'Hebrew Holiday';
+                
+                // Get biblical significance
+                let biblicalRef = '';
+                let significance = '';
+                
+                for (const [key, value] of Object.entries(biblicalSignificanceMap)) {
+                  if (holidayName.toLowerCase().includes(key.toLowerCase())) {
+                    biblicalRef = value.reference;
+                    significance = value.significance;
+                    break;
+                  }
+                }
+                
+                hebrewHolidays.push({
+                  date: gregDate,
+                  hebrewDate: getHebrewDateString(gregDate),
+                  holidayName: holidayName,
+                  isHoliday: true,
+                  biblicalReference: biblicalRef || undefined,
+                  significance: significance || undefined
+                });
+              }
+            } catch {
+              // Skip invalid holiday entries
+            }
+          });
         }
-      };
-
-      // Process each Hebrew calendar event
-      events.forEach((event: Event) => {
-        const hdate = event.getDate();
-        const gregDate = hdate.greg();
-        const hebrewDateStr = hdate.toString();
-        const eventDesc = event.render('en');
         
-        // Check if it's a major holiday
-        const isHoliday = event.getFlags() & (flags.CHAG | flags.MAJOR_FAST | flags.MINOR_FAST | flags.ROSH_CHODESH);
-        
-        // Get biblical significance if available
-        let biblicalRef = '';
-        let significance = '';
-        
-        for (const [key, value] of Object.entries(biblicalSignificance)) {
-          if (eventDesc.includes(key)) {
-            biblicalRef = value.reference;
-            significance = value.significance;
-            break;
+        // Add Hebrew date for each day in the calendar view
+        calendarDays.forEach(day => {
+          if (!hebrewHolidays.some(h => isSameDay(h.date, day))) {
+            hebrewHolidays.push({
+              date: day,
+              hebrewDate: getHebrewDateString(day),
+              isHoliday: false
+            });
           }
-        }
-
-        hebrewHolidays.push({
-          date: gregDate,
-          hebrewDate: hebrewDateStr,
-          holidayName: isHoliday ? eventDesc : undefined,
-          isHoliday: !!isHoliday,
-          biblicalReference: biblicalRef || undefined,
-          significance: significance || undefined
         });
-      });
+        
+      } catch (error) {
+        console.error('Error generating Hebrew calendar:', error);
+        // Fallback: just add Hebrew dates without holidays
+        calendarDays.forEach(day => {
+          hebrewHolidays.push({
+            date: day,
+            hebrewDate: getHebrewDateString(day),
+            isHoliday: false
+          });
+        });
+      }
 
       setHebrewEvents(hebrewHolidays);
     };
 
     generateHebrewEvents();
-  }, [currentDate]);
+  }, [currentDate, calendarDays]);
 
   // Navigation functions
   const navigateToNextMonth = () => {
