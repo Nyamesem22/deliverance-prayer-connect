@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isToday, isSameDay } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
-import Hebcal from 'hebcal';
+
 
 export interface CalendarEvent {
   id: string;
@@ -26,12 +26,17 @@ export interface HebrewCalendarEvent {
   significance?: string;
 }
 
-// Helper function to get Hebrew date string
+// Helper function to get Hebrew date string (browser-native via Intl)
 const getHebrewDateString = (date: Date): string => {
   try {
-    const hd = new Hebcal.HDate(date);
-    return hd.toString('h');
+    // Uses the built-in Hebrew calendar when supported by the browser/JS engine
+    return new Intl.DateTimeFormat('en-u-ca-hebrew', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(date);
   } catch {
+    // Fallback: still render something rather than crash
     return '';
   }
 };
@@ -167,90 +172,93 @@ export const useCalendar = () => {
     setEvents(sampleEvents);
   }, []);
 
-  // Generate Hebrew calendar events
+  // Generate Hebrew calendar events (never crash the app)
   useEffect(() => {
-    const generateHebrewEvents = () => {
-      const hebrewHolidays: HebrewCalendarEvent[] = [];
-      
+    let cancelled = false;
+
+    const monthStart = startOfMonth(currentDate);
+    const monthEnd = endOfMonth(currentDate);
+    const calendarStart = startOfWeek(monthStart);
+    const calendarEnd = endOfWeek(monthEnd);
+
+    // Baseline: Hebrew date for every day in the grid (works even without any library)
+    const byDayKey = new Map<string, HebrewCalendarEvent>();
+    for (const day of calendarDays) {
+      const key = format(day, 'yyyy-MM-dd');
+      byDayKey.set(key, {
+        date: day,
+        hebrewDate: getHebrewDateString(day),
+        isHoliday: false,
+      });
+    }
+
+    (async () => {
       try {
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth() + 1; // Hebcal months are 1-indexed
-        
-        // Get the Hebrew year for this Gregorian date
-        const hebYear = new Hebcal.HDate(currentDate).getFullYear();
-        
-        // Create a Hebcal instance for the Hebrew year
-        const hc = new Hebcal.Year(hebYear);
-        
-        // Get holidays for this year
-        const holidays = hc.holidays;
-        
-        if (holidays && Array.isArray(holidays)) {
-          holidays.forEach((holiday: { date?: Date; greg?: () => Date; name?: string; desc?: string }) => {
-            try {
-              const gregDate = holiday.date || (holiday.greg ? holiday.greg() : null);
-              if (!gregDate) return;
-              
-              // Check if holiday is in current month view
-              if (gregDate.getMonth() === currentDate.getMonth() && 
-                  gregDate.getFullYear() === currentDate.getFullYear()) {
-                
-                const holidayName = holiday.name || holiday.desc || 'Hebrew Holiday';
-                
-                // Get biblical significance
-                let biblicalRef = '';
-                let significance = '';
-                
-                for (const [key, value] of Object.entries(biblicalSignificanceMap)) {
-                  if (holidayName.toLowerCase().includes(key.toLowerCase())) {
-                    biblicalRef = value.reference;
-                    significance = value.significance;
-                    break;
-                  }
-                }
-                
-                hebrewHolidays.push({
-                  date: gregDate,
-                  hebrewDate: getHebrewDateString(gregDate),
-                  holidayName: holidayName,
-                  isHoliday: true,
-                  biblicalReference: biblicalRef || undefined,
-                  significance: significance || undefined
-                });
-              }
-            } catch {
-              // Skip invalid holiday entries
+        // Optional enrichment: holiday names/significance from @hebcal/core
+        const mod = await import('@hebcal/core');
+        const HebrewCalendar: any = (mod as any).HebrewCalendar;
+        const flags: any = (mod as any).flags;
+
+        const calEvents: any[] = HebrewCalendar.calendar({
+          start: calendarStart,
+          end: calendarEnd,
+          candlelighting: false,
+          sedrot: false,
+          omer: false,
+          locale: 'en',
+        });
+
+        for (const ev of calEvents) {
+          const hdate = ev?.getDate?.();
+          if (!hdate) continue;
+
+          const gregDate: Date = hdate.greg();
+          const key = format(gregDate, 'yyyy-MM-dd');
+          const existing = byDayKey.get(key);
+          if (!existing) continue;
+
+          const desc: string = ev.render?.('en') ?? '';
+          const isHoliday =
+            ((ev.getFlags?.() ?? 0) &
+              (flags.CHAG | flags.MAJOR_FAST | flags.MINOR_FAST | flags.ROSH_CHODESH)) !==
+            0;
+
+          let biblicalRef = existing.biblicalReference ?? '';
+          let significance = existing.significance ?? '';
+
+          for (const [k, v] of Object.entries(biblicalSignificanceMap)) {
+            if (desc.toLowerCase().includes(k.toLowerCase())) {
+              biblicalRef = v.reference;
+              significance = v.significance;
+              break;
             }
+          }
+
+          byDayKey.set(key, {
+            ...existing,
+            // Prefer library string if available
+            hebrewDate: hdate.toString?.() ?? existing.hebrewDate,
+            isHoliday: existing.isHoliday || isHoliday,
+            holidayName: isHoliday
+              ? (existing.holidayName ? `${existing.holidayName}; ${desc}` : desc)
+              : existing.holidayName,
+            biblicalReference: biblicalRef || undefined,
+            significance: significance || undefined,
           });
         }
-        
-        // Add Hebrew date for each day in the calendar view
-        calendarDays.forEach(day => {
-          if (!hebrewHolidays.some(h => isSameDay(h.date, day))) {
-            hebrewHolidays.push({
-              date: day,
-              hebrewDate: getHebrewDateString(day),
-              isHoliday: false
-            });
-          }
-        });
-        
       } catch (error) {
-        console.error('Error generating Hebrew calendar:', error);
-        // Fallback: just add Hebrew dates without holidays
-        calendarDays.forEach(day => {
-          hebrewHolidays.push({
-            date: day,
-            hebrewDate: getHebrewDateString(day),
-            isHoliday: false
-          });
-        });
+        // Silent fallback: baseline Hebrew dates still render
+        console.error('Hebrew calendar enrichment unavailable:', error);
       }
 
-      setHebrewEvents(hebrewHolidays);
-    };
+      if (!cancelled) {
+        setHebrewEvents(Array.from(byDayKey.values()));
+      }
+    })();
 
-    generateHebrewEvents();
+    return () => {
+      cancelled = true;
+    };
   }, [currentDate, calendarDays]);
 
   // Navigation functions
